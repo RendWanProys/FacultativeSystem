@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="FacultativeSystem.Api/FacultativeSystem.Api.csproj" />
+  <Project Path="FacultativeSystem.Core/FacultativeSystem.Core.csproj" />
+  <Project Path="FacultativeSystem.Tests/FacultativeSystem.Tests.csproj" />
+  <Project Path="FacultativeSystem/FacultativeSystem.csproj" />
+</Solution>

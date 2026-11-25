@@ -1,0 +1,511 @@
+<UserControl x:Class="FacultativeSystem.Views.AdminView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:FacultativeSystem.Views"
+             Background="{StaticResource AppBackgroundBrush}">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Панель администратора" Style="{StaticResource PageTitleStyle}"/>
+                <TextBlock Text="Управление факультативами, учебными группами, правами доступа и учебным процессом"
+                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,2,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="Сохранить резервную копию" Command="{Binding BackupDatabaseCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"/>
+                <Button Content="Обновить" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryButton}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Вкладки администратора -->
+        <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" Background="Transparent" BorderThickness="0">
+
+            <!-- Вкладка 1: Факультативы -->
+            <TabItem Header="Факультативы (Создание и удаление)">
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.35*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource CardBorder}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                                <TextBlock Text="Поиск по названию факультатива или преподавателю" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding AdminCourseSearchQuery, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}"/>
+                            </StackPanel>
+
+                            <DataGrid Grid.Row="1" ItemsSource="{Binding Courses}" SelectedItem="{Binding SelectedCourse}"
+                                      Style="{StaticResource ModernDataGrid}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="42"/>
+                                    <DataGridTextColumn Header="Наименование курса" Binding="{Binding Title}" Width="1.8*" MinWidth="200"/>
+                                    <DataGridTextColumn Header="Преподаватель" Binding="{Binding TeacherName}" Width="1.4*" MinWidth="150"/>
+                                    <DataGridTextColumn Header="Часы" Binding="{Binding HoursDisplay}" Width="62"/>
+                                    <DataGridTextColumn Header="Групп" Binding="{Binding GroupsCount}" Width="58"/>
+                                    <DataGridTextColumn Header="Студентов" Binding="{Binding CapacityDisplay}" Width="88"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource CardBorder}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="Карточка факультатива" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,12"/>
+
+                                <TextBlock Text="Название факультатива" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CourseTitle, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
+
+                                <TextBlock Text="Ответственный преподаватель" Style="{StaticResource FieldLabelStyle}"/>
+                                <Grid x:Name="TeacherPickerRoot" Margin="0,0,0,10">
+                                    <Border Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" MinHeight="34">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="28"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="TeacherInputBox"
+                                                     Grid.Column="0"
+                                                     BorderThickness="0"
+                                                     Background="Transparent"
+                                                     Padding="8,4"
+                                                     FontFamily="Segoe UI"
+                                                     FontSize="13"
+                                                     Foreground="{StaticResource TextPrimaryBrush}"
+                                                     VerticalContentAlignment="Center"
+                                                     Text="{Binding TeacherSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                     PreviewKeyUp="TeacherInputBox_PreviewKeyUp"
+                                                     PreviewKeyDown="TeacherInputBox_PreviewKeyDown"
+                                                     GotKeyboardFocus="TeacherInputBox_GotKeyboardFocus"/>
+                                            <Button x:Name="TeacherDropdownBtn"
+                                                    Grid.Column="1"
+                                                    Content="▾"
+                                                    FontSize="13"
+                                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Cursor="Hand"
+                                                    Focusable="False"
+                                                    Click="TeacherDropdownBtn_Click"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <Popup x:Name="TeacherPopup"
+                                           PlacementTarget="{Binding ElementName=TeacherPickerRoot}"
+                                           Placement="Bottom"
+                                           StaysOpen="False"
+                                           AllowsTransparency="True">
+                                        <Border Background="#FFFFFF"
+                                                BorderBrush="#CBD5E1"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Margin="0,2,0,0"
+                                                Width="{Binding ActualWidth, ElementName=TeacherPickerRoot}"
+                                                MaxHeight="190">
+                                            <ListBox x:Name="TeacherSuggestionsList"
+                                                     ItemsSource="{Binding FilteredTeacherSuggestions}"
+                                                     DisplayMemberPath="FullName"
+                                                     BorderThickness="0"
+                                                     Background="Transparent"
+                                                     FontFamily="Segoe UI"
+                                                     FontSize="13"
+                                                     Padding="2"
+                                                     PreviewMouseLeftButtonUp="TeacherSuggestionsList_PreviewMouseLeftButtonUp"
+                                                     PreviewKeyDown="TeacherSuggestionsList_PreviewKeyDown">
+                                                <ListBox.ItemContainerStyle>
+                                                    <Style TargetType="ListBoxItem">
+                                                        <Setter Property="Padding" Value="8,6"/>
+                                                        <Setter Property="Cursor" Value="Hand"/>
+                                                    </Style>
+                                                </ListBox.ItemContainerStyle>
+                                            </ListBox>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
+
+                                <TextBlock Text="Объем (часов)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CourseHours, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
+
+                                <TextBlock Text="Краткое описание" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CourseDescription, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource ModernTextBox}" Height="96" TextWrapping="Wrap" AcceptsReturn="True" VerticalContentAlignment="Top" Margin="0,0,0,14"/>
+
+                                <StackPanel>
+                                    <Button Content="Создать факультет" Command="{Binding CreateCourseCommand}" Style="{StaticResource SuccessButton}" Margin="0,0,0,8"/>
+                                    <Button Content="Сохранить изменения" Command="{Binding UpdateCourseCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,0,8"/>
+                                    <Button Content="Удалить факультет" Command="{Binding DeleteCourseCommand}" Style="{StaticResource DangerButton}" Margin="0,0,0,8"/>
+                                    <Button Content="Очистить" Command="{Binding ClearCourseFormCommand}" Style="{StaticResource SecondaryButton}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- Вкладка 2: Группы (управление группами, просмотр студентов группы и привязка к факультативам) -->
+            <TabItem Header="Группы и привязка к факультативам">
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="340"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Левая панель: поиск и список учебных групп -->
+                    <Border Grid.Column="0" Style="{StaticResource CardBorder}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="12"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="Учебные группы" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8"/>
+
+                            <StackPanel Grid.Row="1" Margin="0,0,0,10">
+                                <TextBlock Text="Поиск группы" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding GroupSearchQuery, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}"/>
+                            </StackPanel>
+
+                            <DataGrid Grid.Row="2" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"
+                                      Style="{StaticResource ModernDataGrid}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Группа" Binding="{Binding Name}" Width="*" MinWidth="120"/>
+                                    <DataGridTextColumn Header="Студ." Binding="{Binding StudentsCount}" Width="55"/>
+                                    <DataGridTextColumn Header="Курсов" Binding="{Binding CoursesCount}" Width="62"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <StackPanel Grid.Row="4">
+                                <TextBlock Text="Название группы" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding GroupNameInput, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
+                                <WrapPanel HorizontalAlignment="Right">
+                                    <Button Content="Удалить" Command="{Binding DeleteGroupCommand}" Style="{StaticResource DangerButton}" Margin="0,0,6,0" Padding="10,7"/>
+                                    <Button Content="Переименовать" Command="{Binding RenameGroupCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,6,0" Padding="10,7"/>
+                                    <Button Content="Создать" Command="{Binding CreateGroupCommand}" Style="{StaticResource SuccessButton}" Padding="12,7"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Правая панель: выбор между просмотром студентов группы и управлением факультативами группы -->
+                    <TabControl Grid.Column="2" SelectedIndex="{Binding GroupRightTabIndex}" Background="Transparent" BorderThickness="0">
+
+                        <!-- Режим 1: Просмотр студентов группы -->
+                        <TabItem Header="Просмотр студентов группы">
+                            <Border Style="{StaticResource CardBorder}" Margin="0,10,0,0">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                                        <TextBlock Text="{Binding SelectedGroup.Name, StringFormat='Студенты группы: {0}', TargetNullValue='Выберите группу слева'}"
+                                                   Style="{StaticResource SectionTitleStyle}"/>
+                                        <TextBlock Text="Состав группы формируется автоматически при создании или редактировании студента на вкладке «Пользователи»."
+                                                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <DataGrid Grid.Row="1" ItemsSource="{Binding GroupStudents}" Style="{StaticResource ModernDataGrid}">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="ФИО студента" Binding="{Binding FullName}" Width="1.8*" MinWidth="180"/>
+                                            <DataGridTextColumn Header="Логин" Binding="{Binding Login}" Width="110"/>
+                                            <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="1.4*" MinWidth="150"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                            </Border>
+                        </TabItem>
+
+                        <!-- Режим 2: Просмотр и привязка факультативов группы с поиском -->
+                        <TabItem Header="Факультативы группы (просмотр и привязка)">
+                            <Grid Margin="0,10,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="10"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="10"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Border Grid.Row="0" Style="{StaticResource CardBorder}" Padding="12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="12"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Поиск факультатива (название или преподаватель):"
+                                                   Style="{StaticResource FieldLabelStyle}" VerticalAlignment="Center" Margin="0"/>
+                                        <TextBox Grid.Column="2" Text="{Binding GroupBindCourseSearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource ModernTextBox}"/>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Привязанные к группе факультативы -->
+                                <Border Grid.Row="2" Style="{StaticResource CardBorder}">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+
+                                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding SelectedGroup.Name, StringFormat='Привязанные факультативы группы: {0}', TargetNullValue='Привязанные факультативы'}"
+                                                       Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="Отвязать выбранный" Command="{Binding UnbindGroupFromCourseCommand}"
+                                                    Style="{StaticResource DangerButton}" Padding="12,6"/>
+                                        </Grid>
+
+                                        <DataGrid Grid.Row="1" ItemsSource="{Binding GroupCourses}" SelectedItem="{Binding SelectedGroupCourse}"
+                                                  Style="{StaticResource ModernDataGrid}">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Факультатив" Binding="{Binding Title}" Width="1.8*" MinWidth="200"/>
+                                                <DataGridTextColumn Header="Преподаватель" Binding="{Binding TeacherName}" Width="1.4*" MinWidth="150"/>
+                                                <DataGridTextColumn Header="Часы" Binding="{Binding HoursDisplay}" Width="70"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Доступные для привязки факультативы -->
+                                <Border Grid.Row="4" Style="{StaticResource CardBorder}">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+
+                                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Доступные факультативы для привязки"
+                                                       Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="Привязать выбранный" Command="{Binding BindGroupToCourseCommand}"
+                                                    Style="{StaticResource SuccessButton}" Padding="12,6"/>
+                                        </Grid>
+
+                                        <DataGrid Grid.Row="1" ItemsSource="{Binding AvailableCoursesToBind}" SelectedItem="{Binding CourseToBind}"
+                                                  Style="{StaticResource ModernDataGrid}">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Факультатив" Binding="{Binding Title}" Width="1.8*" MinWidth="200"/>
+                                                <DataGridTextColumn Header="Преподаватель" Binding="{Binding TeacherName}" Width="1.4*" MinWidth="150"/>
+                                                <DataGridTextColumn Header="Часы" Binding="{Binding HoursDisplay}" Width="70"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
+                </Grid>
+            </TabItem>
+
+            <!-- Вкладка 3: Пользователи и изменения доступов (с поиском, фильтром ролей и автоподбором групп) -->
+            <TabItem Header="Пользователи и изменения доступов">
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.35*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource CardBorder}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="170"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Поиск по ФИО, логину, группе или email" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBox Text="{Binding UserSearchQuery, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Фильтр по роли" Style="{StaticResource FieldLabelStyle}"/>
+                                    <ComboBox ItemsSource="{Binding UserRoleFilterOptions}" SelectedItem="{Binding SelectedUserRoleFilter}"
+                                              Style="{StaticResource ModernComboBox}"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <DataGrid Grid.Row="1" ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}"
+                                      Style="{StaticResource ModernDataGrid}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Логин" Binding="{Binding Login}" Width="95"/>
+                                    <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="1.6*" MinWidth="180"/>
+                                    <DataGridTextColumn Header="Роль доступа" Binding="{Binding RoleDisplay}" Width="115"/>
+                                    <DataGridTextColumn Header="Группа" Binding="{Binding StudentGroup}" Width="90"/>
+                                    <DataGridTextColumn Header="Статус" Binding="{Binding StatusDisplay}" Width="110"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource CardBorder}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="Управление доступом и учетной записью" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,12"/>
+
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Логин" Style="{StaticResource FieldLabelStyle}"/>
+                                        <TextBox Text="{Binding UserLogin, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Пароль (новый / при создании)" Style="{StaticResource FieldLabelStyle}"/>
+                                        <TextBox Text="{Binding UserPassword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="ФИО" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding UserFullName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
+
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Роль в системе" Style="{StaticResource FieldLabelStyle}"/>
+                                        <ComboBox ItemsSource="{Binding RoleOptions}" SelectedItem="{Binding UserRole}" Style="{StaticResource ModernComboBox}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Группа (для студента — ввод/выбор)" Style="{StaticResource FieldLabelStyle}"/>
+                                        <Grid x:Name="GroupPickerRoot" IsEnabled="{Binding IsStudentRoleSelected}">
+                                            <Border Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" MinHeight="34">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsEnabled" Value="False">
+                                                                <Setter Property="Background" Value="#F8FAFC"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="28"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox x:Name="GroupInputBox"
+                                                             Grid.Column="0"
+                                                             BorderThickness="0"
+                                                             Background="Transparent"
+                                                             Padding="8,4"
+                                                             FontFamily="Segoe UI"
+                                                             FontSize="13"
+                                                             Foreground="{StaticResource TextPrimaryBrush}"
+                                                             VerticalContentAlignment="Center"
+                                                             Text="{Binding UserGroup, UpdateSourceTrigger=PropertyChanged}"
+                                                             PreviewKeyUp="GroupInputBox_PreviewKeyUp"
+                                                             PreviewKeyDown="GroupInputBox_PreviewKeyDown"
+                                                             GotKeyboardFocus="GroupInputBox_GotKeyboardFocus"/>
+                                                    <Button x:Name="GroupDropdownBtn"
+                                                            Grid.Column="1"
+                                                            Content="▾"
+                                                            FontSize="13"
+                                                            Foreground="{StaticResource TextSecondaryBrush}"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Cursor="Hand"
+                                                            Focusable="False"
+                                                            Click="GroupDropdownBtn_Click"/>
+                                                </Grid>
+                                            </Border>
+
+                                            <Popup x:Name="GroupPopup"
+                                                   PlacementTarget="{Binding ElementName=GroupPickerRoot}"
+                                                   Placement="Bottom"
+                                                   StaysOpen="False"
+                                                   AllowsTransparency="True">
+                                                <Border Background="#FFFFFF"
+                                                        BorderBrush="#CBD5E1"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6"
+                                                        Margin="0,2,0,0"
+                                                        Width="{Binding ActualWidth, ElementName=GroupPickerRoot}"
+                                                        MaxHeight="190">
+                                                    <ListBox x:Name="GroupSuggestionsList"
+                                                             ItemsSource="{Binding FilteredGroupSuggestions}"
+                                                             BorderThickness="0"
+                                                             Background="Transparent"
+                                                             FontFamily="Segoe UI"
+                                                             FontSize="13"
+                                                             Padding="2"
+                                                             PreviewMouseLeftButtonUp="GroupSuggestionsList_PreviewMouseLeftButtonUp"
+                                                             PreviewKeyDown="GroupSuggestionsList_PreviewKeyDown">
+                                                        <ListBox.ItemContainerStyle>
+                                                            <Style TargetType="ListBoxItem">
+                                                                <Setter Property="Padding" Value="8,6"/>
+                                                                <Setter Property="Cursor" Value="Hand"/>
+                                                            </Style>
+                                                        </ListBox.ItemContainerStyle>
+                                                    </ListBox>
+                                                </Border>
+                                            </Popup>
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="Email" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding UserEmail, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
+
+                                <CheckBox Content="Доступ к системе разрешен (аккаунт активен)" IsChecked="{Binding UserIsActive}" Margin="0,0,0,14"/>
+
+                                <StackPanel>
+                                    <Button Content="Создать пользователя" Command="{Binding CreateUserCommand}" Style="{StaticResource SuccessButton}" Margin="0,0,0,8"/>
+                                    <Button Content="Сохранить изменения" Command="{Binding UpdateUserAccessCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,0,8"/>
+                                    <Button Content="Удалить" Command="{Binding DeleteUserCommand}" Style="{StaticResource DangerButton}" Margin="0,0,0,8"/>
+                                    <Button Content="Очистить" Command="{Binding ClearUserFormCommand}" Style="{StaticResource SecondaryButton}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- Вкладка 4: Единообразный интерфейс управления факультетом -->
+            <TabItem Header="Управление факультетом (Пары и оценки)">
+                <views:TeacherView DataContext="{Binding CourseManagementVm}"/>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>

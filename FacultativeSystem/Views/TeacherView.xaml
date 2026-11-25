@@ -1,0 +1,431 @@
+<UserControl x:Class="FacultativeSystem.Views.TeacherView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource AppBackgroundBrush}">
+
+    <Grid Margin="{Binding RootMargin}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Верхняя панель (скрывается при встраивании в панель администратора для единообразия высоты и дизайна) -->
+        <Grid Grid.Row="0" Margin="0,0,0,12"
+              Visibility="{Binding IsAdminOverride, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Управление факультетом" Style="{StaticResource PageTitleStyle}"/>
+                <TextBlock Text="{Binding SelectedCourseHeader}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,2,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <CheckBox Content="Показать все факультеты (просмотр)"
+                          IsChecked="{Binding ShowAllCoursesReadOnly}"
+                          VerticalAlignment="Center" Margin="0,0,14,0" FontSize="12"/>
+                <Button Content="Обновить" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryButton}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Основная рабочая область (единообразная у Преподавателя и Администратора) -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="380"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Левая панель: поиск и список факультетов -->
+            <Border Grid.Column="0" Style="{StaticResource CardBorder}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Факультативы" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8"/>
+                    <StackPanel Grid.Row="1" Margin="0,0,0,10">
+                        <TextBlock Text="Поиск по названию или преподавателю" Style="{StaticResource FieldLabelStyle}"/>
+                        <TextBox Text="{Binding CourseSearchQuery, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}"/>
+                    </StackPanel>
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding Courses}" SelectedItem="{Binding SelectedCourse}"
+                              Style="{StaticResource ModernDataGrid}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Факультатив" Binding="{Binding Title}" Width="1.25*" MinWidth="130"/>
+                            <DataGridTextColumn Header="Преподаватель" Binding="{Binding TeacherName}" Width="1.05*" MinWidth="105"/>
+                            <DataGridTextColumn Header="Пар" Binding="{Binding FieldsCount}" Width="42"/>
+                            <DataGridTextColumn Header="Студ." Binding="{Binding EnrolledCount}" Width="48"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+
+            <!-- Правая панель: выбор группы курса + 3 вкладки (для выбранной группы раздельные студенты, расписание и оценки) -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="10"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Общая панель выбора группы курса (переключает студентов, пары и матрицу оценок для выбранной группы) -->
+                <Border Grid.Row="0" Style="{StaticResource CardBorder}" Padding="14,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Группа курса:" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding CourseGroups}" SelectedItem="{Binding SelectedCourseGroup}"
+                                  DisplayMemberPath="Name" Style="{StaticResource ModernComboBox}"/>
+                        <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding BoundGroupsSummary}" FontSize="12.5"
+                                       Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedCourseTeacherDisplay}" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                       Visibility="{Binding SelectedCourse, Converter={StaticResource NullToVis}}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <TabControl Grid.Row="2" SelectedIndex="{Binding SelectedTabIndex}" Background="Transparent" BorderThickness="0">
+
+                    <!-- Вкладка 1: Студенты выбранной группы и итоговые зачёты -->
+                    <TabItem Header="Студенты и итоговые зачёты">
+                        <Grid Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="10"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Таблица студентов выбранной группы -->
+                            <Border Grid.Row="0" Style="{StaticResource CardBorder}">
+                                <DataGrid ItemsSource="{Binding Enrollments}" SelectedItem="{Binding SelectedEnrollment}"
+                                          Style="{StaticResource ModernDataGrid}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Студент" Binding="{Binding StudentName}" Width="1.5*" MinWidth="170"/>
+                                        <DataGridTextColumn Header="Группа" Binding="{Binding CourseGroupName}" Width="115"/>
+                                        <DataGridTextColumn Header="Статус" Binding="{Binding StatusDisplay}" Width="95"/>
+                                        <DataGridTextColumn Header="Зачёт / Итог" Binding="{Binding GradeDisplay}" Width="135"/>
+                                        <DataGridTextColumn Header="Комментарий (заметка)" Binding="{Binding Comment}" Width="1.8*" MinWidth="180"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Border>
+
+                            <!-- Нижняя панель видна ТОЛЬКО при выборе студента -->
+                            <Border Grid.Row="2" Style="{StaticResource CardBorder}"
+                                    Visibility="{Binding SelectedEnrollment, Converter={StaticResource NullToVis}}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="10"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding SelectedEnrollment.StudentName, StringFormat='Студент: {0}'}"
+                                               Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center"/>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <TextBlock Text="Итог / Зачёт:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                        <ComboBox ItemsSource="{Binding GradeChoices}" SelectedItem="{Binding FinalGradeValue}"
+                                                  Style="{StaticResource ModernComboBox}" Width="140" Margin="0,0,10,0"/>
+                                        <Button Content="Сохранить" Command="{Binding SaveGradeCommand}" Style="{StaticResource PrimaryButton}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel Grid.Row="2">
+                                    <TextBlock Text="Комментарий / заметка (необязательное поле)" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBox Text="{Binding FinalCommentText, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}" Height="46" TextWrapping="Wrap" AcceptsReturn="True" VerticalContentAlignment="Top"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </TabItem>
+
+                <!-- Вкладка 2: Поля факультета (Пары и расписание) -->
+                <TabItem Header="Поля факультета (Пары и расписание)">
+                    <Grid Margin="0,10,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="1.15*"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Style="{StaticResource CardBorder}">
+                            <DataGrid ItemsSource="{Binding CourseFields}" SelectedItem="{Binding SelectedField}"
+                                      Style="{StaticResource ModernDataGrid}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="№" Binding="{Binding SortOrder}" Width="38"/>
+                                    <DataGridTextColumn Header="Дата и время" Binding="{Binding LessonDate}" Width="125"/>
+                                    <DataGridTextColumn Header="Тип пары" Binding="{Binding FieldType}" Width="110"/>
+                                    <DataGridTextColumn Header="Тема / название пары" Binding="{Binding FieldName}" Width="1.5*" MinWidth="180"/>
+                                    <DataGridTextColumn Header="Заметка" Binding="{Binding FieldValue}" Width="1.7*" MinWidth="180"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Border>
+
+                        <Border Grid.Row="2" Style="{StaticResource CardBorder}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Редактор пары (поля факультета)" Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="Оценки по выбранной паре →" Command="{Binding GoToLessonGradesCommand}"
+                                            Style="{StaticResource SecondaryButton}" Padding="10,5"/>
+                                </Grid>
+
+                                <Grid Grid.Row="1" Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="1.15*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="1.2*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="72"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Тема / название пары" Style="{StaticResource FieldLabelStyle}"/>
+                                        <TextBox Text="{Binding FieldName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Тип пары" Style="{StaticResource FieldLabelStyle}"/>
+                                        <ComboBox ItemsSource="{Binding FieldTypes}" SelectedItem="{Binding FieldType}" Style="{StaticResource ModernComboBox}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="4">
+                                        <TextBlock Text="Дата / время" Style="{StaticResource FieldLabelStyle}"/>
+                                        <TextBox Text="{Binding LessonDate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="6">
+                                        <TextBlock Text="№" Style="{StaticResource FieldLabelStyle}"/>
+                                        <TextBox Text="{Binding FieldOrder, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                                    <TextBlock Text="Заметка к паре (необязательное поле)" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBox Text="{Binding FieldValue, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}" Height="52" TextWrapping="Wrap" AcceptsReturn="True" VerticalContentAlignment="Top"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="Очистить" Command="{Binding ClearFieldFormCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                                    <Button Content="Удалить пару" Command="{Binding DeleteFieldCommand}" Style="{StaticResource DangerButton}" Margin="0,0,8,0"/>
+                                    <Button Content="Изменить пару" Command="{Binding UpdateFieldCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"/>
+                                    <Button Content="Создать пару" Command="{Binding AddFieldCommand}" Style="{StaticResource SuccessButton}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </TabItem>
+
+                <!-- Вкладка 3: Оценки за пары (таблица как в Excel) -->
+                <TabItem Header="Оценки за пары">
+                    <Grid Margin="0,10,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="10"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="10"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Style="{StaticResource CardBorder}" Padding="12,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Ведомость оценок за пары" Style="{StaticResource SectionTitleStyle}"/>
+                                    <TextBlock Text="Слева — студенты, сверху — даты пар (добавляются во вкладке «Поля факультета»). Нажмите на ячейку или дважды кликните для выставления оценки (клавиши 2–5, Del)."
+                                               Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Row="2" Style="{StaticResource CardBorder}" Padding="10">
+                            <Grid>
+                                <DataGrid x:Name="LessonMatrixGrid"
+                                          ItemsSource="{Binding LessonMatrixRows}"
+                                          Visibility="{Binding HasMatrixData, Converter={StaticResource BoolToVis}}"
+                                          Background="#FFFFFF"
+                                          BorderBrush="#CBD5E1"
+                                          BorderThickness="1"
+                                          RowBackground="#FFFFFF"
+                                          AlternatingRowBackground="#F8FAFC"
+                                          GridLinesVisibility="All"
+                                          HorizontalGridLinesBrush="#CBD5E1"
+                                          VerticalGridLinesBrush="#CBD5E1"
+                                          HeadersVisibility="Column"
+                                          AutoGenerateColumns="False"
+                                          IsReadOnly="False"
+                                          SelectionUnit="Cell"
+                                          SelectionMode="Single"
+                                          FrozenColumnCount="2"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False"
+                                          CanUserReorderColumns="False"
+                                          CanUserResizeColumns="True"
+                                          CanUserSortColumns="False"
+                                          RowHeight="36"
+                                          FontFamily="Segoe UI"
+                                          FontSize="13"
+                                          SelectedCellsChanged="LessonMatrixGrid_SelectedCellsChanged"
+                                          BeginningEdit="LessonMatrixGrid_BeginningEdit"
+                                          PreviewKeyDown="LessonMatrixGrid_PreviewKeyDown">
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="#F1F5F9"/>
+                                            <Setter Property="Foreground" Value="#1E293B"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="FontSize" Value="12"/>
+                                            <Setter Property="Padding" Value="8,6"/>
+                                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+                                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                        </Style>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="Padding" Value="0"/>
+                                            <Setter Property="BorderBrush" Value="Transparent"/>
+                                            <Setter Property="BorderThickness" Value="2"/>
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="Foreground" Value="#0F172A"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="BorderBrush" Value="#2563EB"/>
+                                                    <Setter Property="Background" Value="#EEF2FF"/>
+                                                    <Setter Property="Foreground" Value="#0F172A"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGrid.CellStyle>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Студент" Binding="{Binding StudentName}" Width="210" MinWidth="150" IsReadOnly="True">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="Padding" Value="8,0"/>
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="Группа" Binding="{Binding GroupName}" Width="105" MinWidth="80" IsReadOnly="True">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                    <Setter Property="Padding" Value="6,0"/>
+                                                    <Setter Property="Foreground" Value="#475569"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <TextBlock Text="{Binding MatrixEmptyMessage}"
+                                           Visibility="{Binding HasMatrixData, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           FontSize="13" TextWrapping="Wrap"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Нижняя панель оценки за пару видна ТОЛЬКО при выборе ячейки -->
+                        <Border Grid.Row="4" Style="{StaticResource CardBorder}" Padding="14"
+                                Visibility="{Binding SelectedMatrixCell, Converter={StaticResource NullToVis}}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="10"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0">
+                                        <TextBlock Text="{Binding SelectedMatrixCell.StudentName}" Style="{StaticResource SectionTitleStyle}"/>
+                                        <TextBlock FontSize="12" Foreground="{StaticResource TextSecondaryBrush}">
+                                            <Run Text="{Binding SelectedMatrixCell.LessonDate}"/>
+                                            <Run Text=" • "/>
+                                            <Run Text="{Binding SelectedMatrixCell.LessonTitle}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <Button Content="5" Command="{Binding QuickSetLessonGradeCommand}" CommandParameter="5"
+                                                Style="{StaticResource SuccessButton}" Padding="10,5" MinWidth="34" Margin="0,0,4,0"/>
+                                        <Button Content="4" Command="{Binding QuickSetLessonGradeCommand}" CommandParameter="4"
+                                                Style="{StaticResource PrimaryButton}" Padding="10,5" MinWidth="34" Margin="0,0,4,0"/>
+                                        <Button Content="3" Command="{Binding QuickSetLessonGradeCommand}" CommandParameter="3"
+                                                Style="{StaticResource SecondaryButton}" Padding="10,5" MinWidth="34" Margin="0,0,4,0"/>
+                                        <Button Content="2" Command="{Binding QuickSetLessonGradeCommand}" CommandParameter="2"
+                                                Style="{StaticResource DangerButton}" Padding="10,5" MinWidth="34" Margin="0,0,4,0"/>
+                                        <Button Content="н/я" Command="{Binding QuickSetLessonGradeCommand}" CommandParameter="н/я"
+                                                Style="{StaticResource SecondaryButton}" Padding="9,5" Margin="0,0,4,0"/>
+                                        <Button Content="—" ToolTip="Пропуск (прочерк)" Command="{Binding QuickSetLessonGradeCommand}" CommandParameter="—"
+                                                Style="{StaticResource SecondaryButton}" Padding="10,5" MinWidth="34" Margin="0,0,4,0"/>
+                                        <Button Content="Зачёт" Command="{Binding QuickSetLessonGradeCommand}" CommandParameter="Зачёт"
+                                                Style="{StaticResource SuccessButton}" Padding="10,5" Margin="0,0,4,0"/>
+                                        <Button Content="Незачёт" Command="{Binding QuickSetLessonGradeCommand}" CommandParameter="Незачёт"
+                                                Style="{StaticResource DangerButton}" Padding="10,5" Margin="0,0,4,0"/>
+                                        <Button Content="Сброс" Command="{Binding QuickSetLessonGradeCommand}" CommandParameter="Не выставлена"
+                                                Style="{StaticResource SecondaryButton}" Padding="9,5"/>
+                                    </WrapPanel>
+                                </Grid>
+
+                                <Grid Grid.Row="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Комментарий / заметка (необязательное поле)" Style="{StaticResource FieldLabelStyle}"/>
+                                        <TextBox Text="{Binding LessonCommentText, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource ModernTextBox}"/>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="2" Content="Сохранить заметку" Command="{Binding SaveLessonGradeCommand}"
+                                            Style="{StaticResource PrimaryButton}" VerticalAlignment="Bottom" Height="34"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </TabItem>
+
+                </TabControl>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

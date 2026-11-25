@@ -1,0 +1,20 @@
+# Visual Studio / .NET
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.cache
+TestResults/
+
+# SQLite local runtime databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# OS / temporary
+Thumbs.db
+Desktop.ini
+~$*.docx
